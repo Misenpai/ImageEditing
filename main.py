@@ -1,9 +1,10 @@
-from flask import Flask, redirect, request, flash
+from flask import Flask, redirect, request, flash, session
 from flask import render_template
 import os
 from flask import Flask, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
 import cv2
+import pyrebase
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'webp', 'jpg', 'jpeg', 'gif'}
@@ -11,6 +12,18 @@ ALLOWED_EXTENSIONS = {'png', 'webp', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 app.secret_key = 'super secret key'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+config = {
+    'apiKey': "AIzaSyBw2dzPCQ7HZ8uKRbTcEBou7kFqLEg6jnI",
+    'authDomain': "big-smile-editing.firebaseapp.com",
+    'projectId': "big-smile-editing",
+    'storageBucket': "big-smile-editing.appspot.com",
+    'messagingSenderId': "702313137995",
+    'appId': "1:702313137995:web:fb66a74d60617b54ba0ace",
+    'measurementId': "G-9DQMG7RHTE",
+    'databaseURL': ''
+}
+firebase = pyrebase.initialize_app(config)
+auth = firebase.auth()
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -38,7 +51,25 @@ def processImage(filename,operation):
             return newFilename
     pass 
 
-@app.route('/')
+@app.route('/',methods=['POST','GET'])
+def index():
+    if('user' in session):
+        return "Hi, {}".format(session['user'])
+    if request.method == "POST":
+        email = request.form.get('email')
+        password = request.form.get('password')
+        try:
+            user = auth.sign_in_with_email_and_password(email,password)
+            session['user'] = email
+            return redirect('/index')
+        except:
+            return 'Failed to login'
+    return render_template('home.html')
+@app.route('/logout')
+def logout():
+    session.pop('user')
+    return redirect('/')
+@app.route('/index')
 def home():
     return render_template('index.html')
 @app.route('/about')
